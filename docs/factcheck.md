@@ -1,4 +1,6 @@
-# Fact-check: "Revisión Sistemas Multiagente LLM.md"
+# Fact-check of the external research report on LLM multi-agent systems
+
+The report (written in Spanish by an AI research assistant, not included in this repository) was checked claim by claim against primary sources before any of it was used in the notebook or the paper. Quotes from it are translated into English.
 
 Access date for all web sources: **2026-10-06**. Verified against primary sources: arXiv abs/HTML/PDF, conference pages, official docs and pricing pages.
 
@@ -21,7 +23,7 @@ Access date for all web sources: **2026-10-06**. Verified against primary source
   - **Correction:** the research file says "LLM judge: 94% agreement and κ = 0.88". That is wrong. The 0.88 is human-human agreement; the LLM-human κ is 0.77.
 - **Failure rates:** the paper says "41% to 86.7% failure rate on 7 SOTA open-source MAS" (Intro; Fig. 5, App. B). Per-framework values exist only in the Fig. 5 image. I could not verify the file's numbers (ChatDev 41.4, MetaGPT 56.4, Magentic-One 78.6, OpenManus 86.7). Also note:
   - The Fig. 5 caption says "**six** popular MAS … benchmarks differ, therefore **not directly comparable**".
-  - Calling these "production environments" ("entornos de producción") is wrong. They are benchmark runs.
+  - Calling these "production environments" is wrong. They are benchmark runs.
 - **+15.6%:** confirmed. It comes from adding a high-level task-objective verification step to **ChatDev on ProgramDev** (App. H, Table 5). It is a single case study, not a general effect.
 - **Released artifacts, reusable:**
   - Repo: https://github.com/multi-agent-systems-failure-taxonomy/MAST. It contains `llm_judge_pipeline.ipynb` (the LLM-annotator prompt and pipeline) and `taxonomy_definitions_examples/`. The GitHub API reports **no license** for the repo, so cite it rather than copy it.
@@ -60,7 +62,7 @@ Access date for all web sources: **2026-10-06**. Verified against primary source
 | FM-3.2 | No or incomplete verification | 8.20 | "(Partial) omission of proper checking or confirmation of task outcomes or system outputs, potentially allowing errors." |
 | FM-3.3 | Incorrect verification | 9.10 | "Failure to adequately validate or cross-check crucial information or decisions during the iterations." |
 
-The research file's table lists the same 14 percentages, but without IDs and in its own order. Section 06 of the file says "F3.1 Terminación Prematura" and "F2.4 Retención de Información". Use the official form instead: FM-3.1 and FM-2.4.
+The research file's table lists the same 14 percentages, but without IDs and in its own order. Section 06 of the file says "F3.1 Premature Termination" and "F2.4 Information Withholding". Use the official form instead: FM-3.1 and FM-2.4.
 
 ---
 
@@ -125,7 +127,7 @@ PDF: https://arxiv.org/pdf/2402.16823 (Table 3, Table 11)
   - Reaches a new SOTA on the AlpacaEval 2.0 leaderboard.
   - MoA quality is sensitive to proposer quality; mixing LLMs often lowers average quality.
   - Self-MoA-Seq is a sequential version.
-- **Qualification:** the authors also identify scenarios where mixing helps. The file's "refutación matemática de la diversidad inter-modelos" overstates the result. It is empirical, not a mathematical refutation.
+- **Qualification:** the authors also identify scenarios where mixing helps. The file's "mathematical refutation of inter-model diversity" overstates the result. It is empirical, not a mathematical refutation.
 
 https://arxiv.org/abs/2502.00674
 
@@ -167,8 +169,8 @@ https://arxiv.org/abs/2605.29800
 - **Panickssery, Bowman, Feng, "LLM Evaluators Recognize and Favor Their Own Generations," NeurIPS 2024 (main track, oral).** **CONFIRMED.** arXiv 2404.13076.
   - GPT-4 and Llama 2 can recognize their own outputs with non-trivial accuracy.
   - There is a **linear correlation between self-recognition and self-preference** (shown via fine-tuning).
-  - **Wrong in the file:** "evaluación cruzada reduce este sesgo en más del 30%" is not in this paper. Unsourced.
-  - **Inaccurate in the file:** "firmas sintácticas de perplejidad latente" is not the paper's mechanism.
+  - **Wrong in the file:** "cross-evaluation reduces this bias by more than 30%" is not in this paper. Unsourced.
+  - **Inaccurate in the file:** "latent-perplexity syntactic signatures" is not the paper's mechanism.
 - **Zheng et al., "Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena," NeurIPS 2023 Datasets & Benchmarks.** **CONFIRMED.** arXiv 2306.05685.
   - Identifies **position bias, verbosity bias and self-enhancement bias**, plus limited math reasoning.
   - GPT-4 judge reaches **>80% agreement** with humans, the same level as human-human agreement.
@@ -188,8 +190,8 @@ https://www.anthropic.com/engineering/multi-agent-research-system
   - On BrowseComp, three factors explain 95% of performance variance; "token usage by itself explains 80% of the variance", with the number of tool calls and model choice as the other two.
   - Multi-agent (Opus 4 lead + Sonnet 4 subagents) beat single-agent Opus 4 by **90.2%** on Anthropic's internal research eval.
 - **Errors in the file:**
-  - It says multi-agent uses 15× more tokens "que una interacción de agente único". The post says 15× vs **chat**. Against a single agent it is only about 15/4 ≈ 3.75×.
-  - It attributes the 15× to "mallas completas". Anthropic's system is **orchestrator-worker** (lead agent plus parallel subagents), not a mesh.
+  - It says multi-agent uses 15× more tokens "than a single-agent interaction". The post says 15× vs **chat**. Against a single agent it is only about 15/4 ≈ 3.75×.
+  - It attributes the 15× to "full meshes". Anthropic's system is **orchestrator-worker** (lead agent plus parallel subagents), not a mesh.
 
 ---
 
@@ -297,7 +299,7 @@ https://www.anthropic.com/engineering/multi-agent-research-system
   - **A2A** was first donated to the LF as a separate project (Jun 2025). It **joined AAIF as a hosted project on 17 Aug 2026**.
     - https://aaif.io/blog/a2a-joins-aaif
   - The AAIF projects page now lists MCP, goose, AGENTS.md, agentgateway, A2A and Agent Router: https://aaif.io/projects/
-  - Wording fix: AAIF is a directed fund/foundation under the Linux Foundation, not "una división operativa certificada".
+  - Wording fix: AAIF is a directed fund/foundation under the Linux Foundation, not "a certified operating division".
 
 ---
 
@@ -319,7 +321,7 @@ https://www.anthropic.com/engineering/multi-agent-research-system
 
 ## Claims in the research file that must NOT be used
 
-1. **"Mesh increases communication costs exponentially."** Wrong. A full mesh of n agents has n(n−1) directed messages per round, which is **O(n²)**: quadratic, not exponential. Token cost grows roughly as O(n²·r), plus history re-sending. The file itself later writes "polinómico", which contradicts "exponencial".
+1. **"Mesh increases communication costs exponentially."** Wrong. A full mesh of n agents has n(n−1) directed messages per round, which is **O(n²)**: quadratic, not exponential. Token cost grows roughly as O(n²·r), plus history re-sending. The file itself later writes "polynomial", which contradicts "exponential".
 2. **"AutoGen +8% MATH, +6% HumanEval over baseline."** Not in the paper. Use instead: MATH full test **69.48% vs GPT-4 55.18%**; 120 Level-5 problems **52.5%** (best of the compared systems).
 3. **"65% → 85% programming success with GPT-4."** Unsourced.
 4. **"MAST LLM judge: 94% agreement and κ = 0.88."** Wrong. It is o1 few-shot, accuracy 0.94, κ = **0.77**. The 0.88 is human IAA.
@@ -334,5 +336,5 @@ https://www.anthropic.com/engineering/multi-agent-research-system
 13. **"MAF GA since April 2026, successor of AutoGen and SK."** Correct, but cite Microsoft devblogs and the autogen README, not agentframework.net or blogs.
 14. **"MCP and A2A governed by AAIF."** True only since **17 Aug 2026** for A2A. MCP has been there since Dec 2025. Cite the aaif.io / LF primary pages.
 15. **Ref [112]** "Zhang, S., 'Faulty Implementation and Misread Developer Intent…', arXiv:2605.29442" is mis-cited. The real paper is Tang, Chen, Xu et al., "How Coding Agents Fail Their Users: … 20,574 Real-World Sessions".
-16. **Blog references marked [VERIFICADO]** (NiteAgent, Meiklejohn, AY Automate, BenchLM, LLM Gateway, DeployBase, The Moonlight, agentframework.net, LangChain marketing pages) are secondary. Replace each with the primary source listed above.
+16. **Blog references marked "[VERIFIED]"** (NiteAgent, Meiklejohn, AY Automate, BenchLM, LLM Gateway, DeployBase, The Moonlight, agentframework.net, LangChain marketing pages) are secondary. Replace each with the primary source listed above.
 17. **"Ruflo"** is described as literature. It is grey literature with no peer-reviewed evaluation, so do not use it as evidence.

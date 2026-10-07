@@ -1,76 +1,89 @@
-# Orquestador de *swarms* de agentes LLM agnóstico al modelo y al dominio
+# A model- and domain-agnostic orchestrator for LLM agent swarms
 
 **Julián Andrés Mendoza Castro · Esteban Gaviria Zambrano**
-Inteligencia Artificial (G1), Universidad Icesi, Cali, Colombia · octubre de 2026
+Artificial Intelligence (G1), Universidad Icesi, Cali, Colombia · October 2026
 
-Un orquestador reina–obreros en Python que corre el mismo código sobre la API de DeepSeek o sobre modelos locales en Ollama, y en cualquier dominio descrito como datos. Con él medimos cuánto cuesta y cuánto aporta coordinar agentes.
+A queen–worker orchestrator in Python that runs the same code on the DeepSeek API or on local Ollama models, and in any domain described as data. We use it to measure how much coordinating agents costs and how much it adds.
 
-Comparamos el agente único, una topología jerárquica y una malla con 2 y 4 obreros, sobre `deepseek-flash` sin razonamiento extendido, en tres dominios: GSM8K-Platinum, MATH-500 nivel 5 y un plan de viaje a Cartagena.
+We compare a single agent, a hierarchical topology and a mesh with 2 and 4 workers, using `deepseek-flash` in non-thinking mode, on three domains: GSM8K-Platinum, MATH-500 level 5, and a trip plan for Cartagena.
 
-**Resultado principal** (195 corridas, 921 llamadas, USD 0.22):
+**Main result** (195 runs, 921 calls, USD 0.22):
 
-| | GSM8K-Platinum | MATH-500 nivel 5 | Cartagena |
+| | GSM8K-Platinum | MATH-500 level 5 | Cartagena |
 |---|---|---|---|
-| Calidad del agente único | 1.00 | 1.00 | 1.00 |
-| Mejor calidad de un *swarm* | 1.00 | 1.00 | 1.00 |
-| Costo por corrida frente al agente único | 5.1× – 16.6× | 2.7× – 9.4× | 3.5× – 14.5× |
+| Single-agent quality | 1.00 | 1.00 | 1.00 |
+| Best swarm quality | 1.00 | 1.00 | 1.00 |
+| Cost per run vs. the single agent | 5.1× – 16.6× | 2.7× – 9.4× | 3.5× – 14.5× |
 
-Ninguna configuración superó al agente único en calidad, y el costo de la malla crece con n² por su ronda de revisión. El paper (`paper/main.pdf`) presenta los detalles y las limitaciones, entre ellas el efecto techo y que la rúbrica de Cartagena la aplicó a ciegas un evaluador LLM, no humanos.
+No configuration beat the single agent on quality, and the mesh's cost grows with n² because of its review round. The paper (`paper/main.pdf`, written in Spanish) gives the details and the limitations: ceiling effects, and a Cartagena rubric that was applied blind by an LLM rater rather than by humans.
 
-## Contenido
+## Contents
 
 ```
 notebook/
-  2026.10.07_Demo_Swarm_Notebook_EN_V3.4.ipynb   cuaderno final, ejecutado (con salidas)
-  results_deepseek/      experimento principal
-    runs.jsonl           una fila por corrida (respuesta final, tokens, costo, latencia, fallos)
-    calls.jsonl          una fila por llamada al LLM
-    spend_ledger.jsonl   cada llamada facturada (verificaciones, pilotos, matriz, juez)
-    judge.jsonl          juez LLM secundario (Cartagena)
-    human_eval/          respuestas ciegas, rúbrica, calificaciones y clave
-    figures/             figuras del cuaderno
-  results_ollama/        piloto local con llama3.2:3b y qwen2.5:3b (portabilidad)
-  archive/               pilotos descartados que documentan dos decisiones del paper
-    results_ollama_pilot0_original_gsm8k/   etiqueta errónea del GSM8K original
-    results_deepseek_pilot0_max1024/        respuestas truncadas con 1 024 tokens de salida
+  2026.10.07_Demo_Swarm_Notebook_EN_V3.4.ipynb   final notebook, executed (with outputs)
+  results_deepseek/      main experiment
+    runs.jsonl           one row per run (final answer, tokens, cost, latency, failure flags)
+    calls.jsonl          one row per LLM call
+    spend_ledger.jsonl   every billed call (checks, pilots, grid, judge)
+    judge.jsonl          secondary LLM judge (Cartagena)
+    human_eval/          blind answers, rubric, ratings and the answer key
+    figures/             notebook figures
+  results_ollama/        local pilot with llama3.2:3b and qwen2.5:3b (portability)
+  archive/               discarded pilots that document two decisions in the paper
+    results_ollama_pilot0_original_gsm8k/   wrong label in the original GSM8K
+    results_deepseek_pilot0_max1024/        answers truncated at 1,024 output tokens
 paper/
-  main.tex, main.pdf     artículo (IEEE, español)
-  make_assets.py         genera las figuras y numbers.json a partir de notebook/results_*
-  figs/                  figuras del artículo
-  IEEEtran.cls           clase IEEE (plantilla de conferencia 2024)
-  build_local.sh, make_fonts.sh   compilación local sin las fuentes Times de TeX
+  main.tex, main.pdf     the paper (IEEE conference format, in Spanish)
+  make_assets.py         builds the figures and numbers.json from notebook/results_*
+  figs/                  paper figures (Spanish labels, like the paper)
+  IEEEtran.cls           IEEE class (2024 conference template)
+  build_local.sh, make_fonts.sh   local build without TeX's Times fonts
 docs/
-  factcheck.md           verificación de fuentes primarias usada para las referencias
+  factcheck.md           primary-source check behind the paper's references
 ```
 
-## Requisitos
+## Requirements
 
-- Python 3.11 o superior: `pip install -r requirements.txt`.
-- Para el experimento principal, una API key de DeepSeek.
-- Para el backend local, [Ollama](https://ollama.com) con `llama3.2:3b` y `qwen2.5:3b`.
+- Python 3.11 or later: `pip install -r requirements.txt`.
+- A DeepSeek API key for the main experiment.
+- For the local backend, [Ollama](https://ollama.com) with `llama3.2:3b` and `qwen2.5:3b`.
 
-## Reproducir el cuaderno
+## Reproducing the notebook
 
-Abra Jupyter desde la carpeta `notebook/`; las rutas de datos y resultados son relativas a ella.
+Start Jupyter from the `notebook/` folder; data and results paths are relative to it.
 
-- **Sin costo, solo el pipeline.** Ponga `BACKEND = "mock"` en la sección 1 y ejecute todo. Los resultados van a `results_mock/`, que git ignora.
-- **Con los resultados publicados.** Con `BACKEND = "deepseek"`, cada corrida tiene un identificador determinista, así que el cuaderno reutiliza las 195 corridas de `results_deepseek/` y no las repite. Solo hace una llamada de verificación y el demo didáctico (unos centavos).
-- **La API key.** Expórtela antes de abrir Jupyter (`export DEEPSEEK_API_KEY=...`) o copie `.env.example` a `.env`. Si no la encuentra, el cuaderno la pide con una entrada oculta. Nunca se escribe en el cuaderno ni en los resultados, y `.env` está en `.gitignore`.
-- **Tope de gasto.** `MAX_SPEND_USD` (0.50) detiene cualquier ejecución que pueda superarlo.
-- **Datos.** GSM8K-Platinum y MATH-500 se descargan solos de Hugging Face en `notebook/data/` (ignorada por git).
+- **Pipeline only, at no cost.** Set `BACKEND = "mock"` in section 1 and run everything. Results go to `results_mock/`, which git ignores.
+- **With the published results.** With `BACKEND = "deepseek"`, every run has a deterministic id, so the notebook reuses the 195 runs in `results_deepseek/` instead of repeating them. It only makes one check call and runs the didactic demo, for a few cents.
+- **API key.** Export it before starting Jupyter (`export DEEPSEEK_API_KEY=...`) or copy `.env.example` to `.env`. If the key is not found, the notebook asks for it with a hidden prompt. The key is never written to the notebook or the results, and `.env` is in `.gitignore`.
+- **Spending cap.** `MAX_SPEND_USD` (0.50) stops any run that could exceed it.
+- **Data.** GSM8K-Platinum and MATH-500 are downloaded automatically from Hugging Face into `notebook/data/`, which git ignores.
 
-## Reconstruir el paper
+## Rebuilding the paper
 
 ```bash
-python paper/make_assets.py     # figuras y numbers.json desde notebook/results_*
+python paper/make_assets.py     # figures and numbers.json from notebook/results_*
 ```
 
-- **En Overleaf o con un TeX Live completo:** suba `main.tex`, `IEEEtran.cls` y `figs/`, y compile con pdfLaTeX dos veces.
-- **Si su TeX no trae las fuentes Times (`ptm`):** ejecute `paper/build_local.sh`. Genera un clon de Times con las fuentes URW del sistema (necesita `t1utils` y las fuentes `urw-base35`).
+- **On Overleaf or a full TeX Live:** upload `main.tex`, `IEEEtran.cls` and `figs/`, and compile with pdfLaTeX twice.
+- **If your TeX lacks the Times fonts (`ptm`):** run `paper/build_local.sh`. It builds a Times clone from the system's URW fonts, and needs `t1utils` and the `urw-base35` fonts.
 
-## Datos y licencias
+## Citation
 
-- **Código:** licencia MIT (ver `LICENSE`).
+```bibtex
+@misc{mendoza2026swarm,
+  author       = {Mendoza Castro, Juli{\'a}n Andr{\'e}s and Gaviria Zambrano, Esteban},
+  title        = {A model- and domain-agnostic orchestrator for {LLM} agent swarms},
+  year         = {2026},
+  howpublished = {GitHub repository},
+  url          = {https://github.com/EstebanGZam/swarm-llm-orchestrator}
+}
+```
+
+## Data and licences
+
+- **Code:** MIT licence (see `LICENSE`).
 - **GSM8K-Platinum:** Vendrow et al., 2025; MIT.
-- **MATH-500:** Lightman et al., 2023, subconjunto de MATH (Hendrycks et al., 2021); MIT. No se redistribuye; el cuaderno lo descarga.
-- **Respuestas de Cartagena:** las generó `deepseek-flash` y se incluyen como resultados del experimento.
+- **MATH-500:** Lightman et al., 2023, a subset of MATH (Hendrycks et al., 2021); MIT.
+- **Datasets:** neither is redistributed here; the notebook downloads them.
+- **Cartagena answers:** generated by `deepseek-flash` and included as experiment results.

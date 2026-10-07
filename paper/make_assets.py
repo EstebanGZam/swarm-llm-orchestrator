@@ -43,6 +43,7 @@ judge = pd.DataFrame(jl(DS / "judge.jsonl")).drop_duplicates("run_id", keep="las
 runs = runs.merge(judge[["run_id", "judge_score"]], on="run_id", how="left")
 
 CONFIGS = ["single", "hier-2", "hier-4", "mesh-2", "mesh-4"]
+# Figure labels are in Spanish on purpose: these figures belong to the paper, which is written in Spanish.
 LABEL = {"single": "único", "hier-2": "jer-2", "hier-4": "jer-4", "mesh-2": "malla-2", "mesh-4": "malla-4"}
 DOMS = ["gsm8k", "math", "travel"]
 DNAME = {"gsm8k": "GSM8K-Platinum", "math": "MATH-500 nivel 5", "travel": "Cartagena"}
@@ -158,7 +159,7 @@ fig.tight_layout(pad=0.2, w_pad=0.3)
 fig.savefig(FIGS / "topologias.pdf", bbox_inches="tight"); plt.close(fig)
 
 # Fig. 2: cost relative to the single agent vs n
-fig, axes = plt.subplots(1, 3, figsize=(7.16, 1.75), sharey=True)
+fig, axes = plt.subplots(1, 3, figsize=(7.16, 1.6), sharey=True)
 for ax, d in zip(axes, DOMS):
     s = S[S.domain == d]
     for arch, col, mk, lab in (("hier", C_H, "o", "Jerárquica"), ("mesh", C_M, "^", "Malla")):
@@ -176,7 +177,7 @@ fig.tight_layout(pad=0.3)
 fig.savefig(FIGS / "costo_vs_n.pdf", bbox_inches="tight"); plt.close(fig)
 
 # Fig. 3: quality vs relative cost
-fig, axes = plt.subplots(1, 3, figsize=(7.16, 1.85), sharey=True)
+fig, axes = plt.subplots(1, 3, figsize=(7.16, 1.6), sharey=True)
 for ax, d in zip(axes, DOMS):
     s = S[S.domain == d]
     for _, r in s.iterrows():
@@ -203,7 +204,7 @@ fig.savefig(FIGS / "calidad_vs_costo.pdf", bbox_inches="tight"); plt.close(fig)
 # Fig. 4: where the tokens go (mean tokens per run by stage)
 STAGES = [("single", "Agente único", C_S), ("plan", "Plan (reina)", "#2b3440"), ("work", "Trabajo (obreros)", C_H),
           ("review", "Revisión (malla)", C_M), ("integrate", "Integración (reina)", "#1baf7a")]
-fig, axes = plt.subplots(1, 3, figsize=(7.16, 1.75))
+fig, axes = plt.subplots(1, 3, figsize=(7.16, 1.6))
 for ax, d in zip(axes, DOMS):
     st = stage.loc[d].reindex(CONFIGS)
     bottom = np.zeros(len(CONFIGS))

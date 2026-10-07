@@ -54,7 +54,7 @@ Los sistemas multiagente basados en LLM asignan roles a varios agentes que conve
 
 La pregunta de este trabajo es la que plantea la retroalimentación del curso: \emph{¿agregar agentes y comunicación mejora la calidad lo suficiente para justificar el aumento de costo?} Para responderla con la misma vara se necesita que todo lo demás quede fijo: el modelo, los \textit{prompts}, los límites de generación y la evaluación. Las contribuciones son tres:
 \begin{itemize}
-\item Un orquestador reina--obreros en Python, agnóstico al modelo (la misma API sirve para DeepSeek y para modelos locales en Ollama) y al dominio (cada dominio es un conjunto de datos: roles, tareas, formatos y métrica).
+\item Un orquestador reina--obreros en Python, agnóstico al modelo (la misma API sirve para DeepSeek y para modelos locales en Ollama) y al dominio (cada dominio es un conjunto de datos: roles, tareas, formatos y métrica), publicado con todos sus datos \cite{repo2026swarm}.
 \item Una comparación controlada de costo y calidad de tres topologías con $n\in\{2,4\}$ en tres dominios, con el uso real de tokens que reporta la API, costo, latencia, fallos y señales de coordinación.
 \item Hallazgos metodológicos que afectan a cualquier réplica: una etiqueta errónea de GSM8K, el truncamiento silencioso del contexto en Ollama y la discrepancia entre un juez LLM y la rúbrica.
 \end{itemize}
@@ -256,8 +256,8 @@ Ambos dominios matemáticos quedaron en el techo, así que el estudio mide bien 
 
 Se construyó un orquestador reina--obreros que cambia de modelo y de dominio solo con configuración, y se midió con datos reales de uso cuánto cuesta coordinar. En tres dominios y 195 corridas, por USD~0.22, ni la jerárquica ni la malla mejoraron la calidad del agente único, y su costo creció entre 2.7\x{} y 16.6\x{}; la malla, más del doble de rápido que la jerárquica al aumentar $n$. Con un modelo capaz, la coordinación es un costo que solo se justifica en tareas que un único agente no resuelve.
 
-\section*{Disponibilidad}
-El cuaderno \nolinkurl{2026.10.07_Demo_Swarm_Notebook_EN_V3.4.ipynb}, los registros de cada llamada y el script que genera las tablas y figuras de este artículo acompañan la entrega.
+\section*{Disponibilidad de código y datos}
+El código, el cuaderno ejecutado, los registros de cada corrida y llamada, la evaluación ciega de Cartagena y los scripts que generan las tablas y figuras están en un repositorio público \cite{repo2026swarm}.
 
 \begin{thebibliography}{99}
 
@@ -271,10 +271,10 @@ Q.~Wu, G.~Bansal, J.~Zhang \emph{et~al.}, ``AutoGen: Enabling next-gen LLM appli
 M.~Zhuge, W.~Wang, L.~Kirsch, F.~Faccio, D.~Khizbullin, and J.~Schmidhuber, ``GPTSwarm: Language agents as optimizable graphs,'' in \emph{Proc. 41st Int. Conf. Machine Learning (ICML)}, PMLR 235, 2024.
 
 \bibitem{ruflo}
-ruvnet, ``Ruflo (antes Claude Flow),'' repositorio de GitHub, \url{https://github.com/ruvnet/ruflo}, consultado el 23 de septiembre de 2026.
+ruvnet, ``Ruflo,'' repositorio de GitHub, 2026. \url{https://github.com/ruvnet/ruflo}
 
 \bibitem{anthropic2025multiagent}
-Anthropic, ``How we built our multi-agent research system,'' blog de ingeniería, 13 de junio de 2025. [En línea]. Disponible: \url{https://www.anthropic.com/engineering/multi-agent-research-system}
+Anthropic, ``How we built our multi-agent research system,'' blog de ingeniería, 13 de junio de 2025. \url{https://www.anthropic.com/engineering/multi-agent-research-system}
 
 \bibitem{cemri2025mast}
 M.~Cemri, M.~Z. Pan, S.~Yang \emph{et~al.}, ``Why do multi-agent LLM systems fail?'' in \emph{Advances in Neural Information Processing Systems (NeurIPS), Datasets and Benchmarks Track}, 2025. arXiv:2503.13657.
@@ -323,6 +323,9 @@ Q.~McNemar, ``Note on the sampling error of the difference between correlated pr
 
 \bibitem{cohen1960}
 J.~Cohen, ``A coefficient of agreement for nominal scales,'' \emph{Educational and Psychological Measurement}, vol.~20, no.~1, pp.~37--46, 1960.
+
+\bibitem{repo2026swarm}
+J.~A. Mendoza Castro and E.~Gaviria Zambrano, ``swarm-llm-orchestrator,'' repositorio de GitHub, 2026. \url{https://github.com/EstebanGZam/swarm-llm-orchestrator}
 
 \end{thebibliography}
 
