@@ -1,0 +1,30 @@
+# Secrets: never commit the DeepSeek API key
+.env
+*.env
+!.env.example
+
+# Python / Jupyter
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# Datasets: the notebook downloads them automatically (see README)
+notebook/data/
+
+# Pipeline test runs (BACKEND = "mock")
+notebook/results_mock/
+
+# LaTeX build products and locally generated fonts (paper/make_fonts.sh)
+paper/fonts/
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.synctex.gz
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
