@@ -12,6 +12,7 @@ venv/
 
 # Datasets: the notebook downloads them automatically (see README)
 notebook/data/
+notebook/archive/*/data/
 
 # Pipeline test runs (BACKEND = "mock")
 notebook/results_mock/

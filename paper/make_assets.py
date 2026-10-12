@@ -1,7 +1,7 @@
 """Numbers and figures for the paper, computed from the experiment logs (no hand-typed results).
 
 Run from the repository root:  python paper/make_assets.py
-Reads notebook/results_deepseek and notebook/results_ollama; writes paper/figs/*.pdf and paper/numbers.json
+Reads notebook/archive/v3_deepseek/results_deepseek and .../results_ollama (paper V1.0); writes paper/figs/*.pdf and paper/numbers.json
 and prints the tables used in main.tex.
 """
 import json, math, random
@@ -18,7 +18,8 @@ from matplotlib.lines import Line2D
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
-DS, OL = ROOT / "notebook" / "results_deepseek", ROOT / "notebook" / "results_ollama"
+V3 = ROOT / "notebook" / "archive" / "v3_deepseek"
+DS, OL = V3 / "results_deepseek", V3 / "results_ollama"
 FIGS = HERE / "figs"; FIGS.mkdir(exist_ok=True)
 
 def jl(p):

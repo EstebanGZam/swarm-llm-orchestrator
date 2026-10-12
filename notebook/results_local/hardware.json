@@ -1,0 +1,12 @@
+{
+ "gpu": "NVIDIA GeForce RTX 3050 Laptop GPU",
+ "vram_gb": 4.29,
+ "driver": "595.91.07",
+ "idle_power_w": 4.3320150753768845,
+ "ollama_version": "0.34.0",
+ "ollama_settings": "flash attention, q8_0 KV cache, 1 loaded model, 1 parallel request",
+ "energy_method": "integrated NVML power, 20 Hz",
+ "num_ctx": 8192,
+ "note": "Laptop on AC power, OS performance mode, kept constant for the whole experiment (set by the authors).",
+ "timestamp": "2026-10-11T19:06:48"
+}
