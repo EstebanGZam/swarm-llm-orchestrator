@@ -1,32 +1,107 @@
 {
- "runs": 195,
- "calls": 921,
- "tokens": 662929,
- "billed_calls": 987,
- "spend_billed": 0.22209852,
- "spend_list": 0.445326,
- "cache_hit": 3840,
- "ledger_in": 473448,
- "reasoning": 0,
- "failures": 0,
- "max_prompt": 8129,
- "coord": {
-  "gsm8k": {
-   "swarm_runs": 80,
-   "any_worker_wrong": 1,
-   "queen_kept": 1.0,
-   "review_improved": 0,
-   "mesh_runs": 40
+ "runs_eval": 3640,
+ "swarm_gpu_x_weak": [
+  1.8,
+  20.7
+ ],
+ "swarm_tokens_x_weak_max": 26.3,
+ "joule_per_gpu_s": [
+  54.9,
+  73.4
+ ],
+ "travel_gpu_x_weak": [
+  3.4,
+  15.3
+ ],
+ "qwen_gsm8k_mixed_gpu_x_strong": [
+  2.4,
+  5.9
+ ],
+ "qwen_gsm8k_strong_gpu_x_weak": 1.58,
+ "qwen_math_mixed_gpu_x_strong": [
+  1.4,
+  3.8
+ ],
+ "qwen_math_strong_gpu_x_weak": 1.71,
+ "llama_gsm8k_mixed_gpu_x_strong": [
+  6.4,
+  12.0
+ ],
+ "llama_gsm8k_strong_gpu_x_weak": 1.73,
+ "llama_math_mixed_gpu_x_strong": [
+  3.9,
+  6.7
+ ],
+ "llama_math_strong_gpu_x_weak": 1.35,
+ "largest_prompt": 4281,
+ "holm_significant": 3,
+ "contrasts": 80,
+ "phi": [
+  0.24,
+  0.45
+ ],
+ "kendall": [
+  {
+   "domain": "gsm8k",
+   "metric": "quality",
+   "configs": 10,
+   "kendall_tau": 0.582,
+   "p_value": 0.023
   },
-  "math": {
-   "swarm_runs": 40,
-   "any_worker_wrong": 8,
-   "queen_kept": 1.0,
-   "review_improved": 5,
-   "mesh_runs": 20
+  {
+   "domain": "gsm8k",
+   "metric": "gpu_s_x_weak",
+   "configs": 10,
+   "kendall_tau": 0.911,
+   "p_value": 0.0
+  },
+  {
+   "domain": "math",
+   "metric": "quality",
+   "configs": 10,
+   "kendall_tau": -0.128,
+   "p_value": 0.634
+  },
+  {
+   "domain": "math",
+   "metric": "gpu_s_x_weak",
+   "configs": 10,
+   "kendall_tau": 0.822,
+   "p_value": 0.0
+  },
+  {
+   "domain": "travel",
+   "metric": "quality",
+   "configs": 10,
+   "kendall_tau": 0.145,
+   "p_value": 0.58
+  },
+  {
+   "domain": "travel",
+   "metric": "gpu_s_x_weak",
+   "configs": 10,
+   "kendall_tau": 0.956,
+   "p_value": 0.0
   }
+ ],
+ "idle_w": 4.33,
+ "cartagena_by_arch": {
+  "hier": 0.39,
+  "mesh": 0.48,
+  "single": 0.61
  },
- "local_runs": 20,
- "local_calls": 108,
- "local_max_prompt": 3250
+ "cartagena_trunc": {
+  "false": 0.51,
+  "true": 0.4
+ },
+ "cartagena_trunc_n": 13,
+ "cartagena_criteria": {
+  "c1": 32,
+  "c2": 28,
+  "c3": 17,
+  "c4": 15,
+  "c5": 1,
+  "c6": 4,
+  "c7": 35
+ }
 }

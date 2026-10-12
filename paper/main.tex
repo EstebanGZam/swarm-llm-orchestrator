@@ -17,14 +17,15 @@
 \def\UrlBreaks{\do\_\do\.\do\/\do\-}
 
 \newcommand{\x}{\ensuremath{\times}}
+\makeatletter\newcommand{\tabinput}[1]{\@@input #1 }\makeatother   % TeX primitive: works inside tabular with booktabs rules
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
 \renewcommand{\figurename}{Figura}
 \renewcommand{\IEEEkeywordsname}{Palabras clave}
 
 \begin{document}
 
-\title{Más agentes, más costo: evaluación costo--calidad de topologías de \textit{swarms} de agentes LLM con un orquestador agnóstico al modelo y al dominio
-\thanks{Paper, curso Inteligencia Artificial (G1), Universidad Icesi, Cali, Colombia. Fecha: 7 de octubre de 2026.}}
+\title{Mejor reina que más obreros: costo y calidad de \textit{swarms} de agentes LLM pequeños con un orquestador agnóstico al modelo y al dominio
+\thanks{Paper, curso Inteligencia Artificial (G1), Universidad Icesi, Cali, Colombia. Versión 2.0, 12 de octubre de 2026.}}
 
 \author{\IEEEauthorblockN{Julián Andrés Mendoza Castro}
 \IEEEauthorblockA{Código A00395237\\
@@ -41,27 +42,28 @@ esteban.gaviria@u.icesi.edu.co}}
 \maketitle
 
 \begin{abstract}
-Un \textit{swarm} de agentes LLM reparte una tarea entre varios agentes que se comunican, pero cada agente y cada mensaje se pagan en tokens. Este trabajo presenta un orquestador reina--obreros que cambia de modelo y de dominio solo con configuración, y lo usa para medir de forma controlada cuánto cuesta y cuánto aporta coordinar. Se comparan el agente único, una topología jerárquica y una malla con $n=2$ y $n=4$ obreros, sobre \texttt{deepseek-flash} sin razonamiento extendido, en tres dominios: GSM8K-Platinum, problemas de nivel 5 de MATH-500 y la planificación de un viaje a Cartagena. Se registró el uso real de la API en 195 corridas (921 llamadas, 0 fallos técnicos) por USD~0.22. Ninguna configuración superó al agente único en calidad: las dos tareas matemáticas quedaron en el techo (exactitud 1.00 en todas las configuraciones) y en la rúbrica de Cartagena el agente único obtuvo 1.00 frente a 0.81--1.00 de los \textit{swarms}. El costo por corrida, en cambio, creció entre 2.7\x{} y 16.6\x{} respecto al agente único, y al pasar de 2 a 4 obreros la malla creció entre 2.4 y 3.8 veces más rápido que la jerárquica, porque su ronda de revisión escala con $n^2$. Las mismas corridas muestran que la redundancia sí corrige errores internos (en MATH, la revisión de la malla corrigió a todos los obreros equivocados), pero sobre tareas que un solo agente ya resuelve esa corrección no se traduce en calidad final. Dos modelos locales de 3B en Ollama ejecutaron el mismo código como prueba de portabilidad.
+Un \textit{swarm} de agentes LLM reparte una tarea entre varios agentes que se comunican, y cada agente y cada mensaje consumen cómputo. Este trabajo presenta un orquestador reina--obreros que cambia de modelo y de dominio solo con configuración y lo usa para responder cuándo coordinar compensa su costo. Para que un \textit{swarm} tuviera margen de mejorar, se usaron modelos pequeños que se equivocan con frecuencia: dos pares fuerte/débil (Qwen 2.5 de 3B/1.5B y Llama 3.2 de 3B/1B), ejecutados al 100\,\% en una misma GPU de 4\,GB. Se compararon \textit{swarms} jerárquicos y en malla con 2 y 4 obreros, con reina débil o fuerte, frente al agente único fuerte, al débil y a la votación por mayoría con el mismo número de llamadas, en GSM8K-Platinum, MATH-500 nivel~5 y un plan de viaje a Cartagena. En 3\,640 corridas con hipótesis registradas de antemano, los \textit{swarms} costaron entre 1.8\x{} y 20.7\x{} los GPU-segundos del agente débil, y la energía siguió a los GPU-segundos. Los \textit{swarms} formados solo por el modelo débil no mejoraron al agente débil y quedaron por debajo de la votación en GSM8K (de $-0.08$ a $-0.19$). Con reina fuerte quedaron por debajo del modelo fuerte solo (de $-0.07$ a $-0.23$), a un costo de 2.4\x{} a 12.0\x{}. Cambiar solo la reina por el modelo fuerte sí mejoró la exactitud en GSM8K (de $+0.11$ a $+0.19$) y redujo los planes inválidos de Llama del 81--92\,\% al 22--39\,\% de las corridas. Con modelos pequeños, el cuello de botella es la coordinación: conviene un mejor coordinador o un modelo más capaz, no más agentes.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Sistemas multiagente, modelos de lenguaje, orquestación, topologías de comunicación, costo--calidad, modos de fallo.
+Sistemas multiagente, modelos de lenguaje, orquestación, costo--calidad, votación por mayoría, modelos locales, energía.
 \end{IEEEkeywords}
 
 \section{Introducción}
 
-Los sistemas multiagente basados en LLM asignan roles a varios agentes que conversan para resolver una tarea \cite{guo2024survey}. AutoGen los modela como conversaciones programables \cite{wu2024autogen}, GPTSwarm como grafos cuyos nodos y aristas se pueden optimizar \cite{zhuge2024gptswarm}, y herramientas como Ruflo los ofrecen como \textit{swarms} con una reina y obreros \cite{ruflo}. Coordinar tiene un costo directo: Anthropic reporta que su sistema de investigación multiagente usa unas 15 veces los tokens de un chat \cite{anthropic2025multiagent}. También tiene un costo de fiabilidad: la taxonomía MAST atribuye la mayoría de los fallos de estos sistemas al diseño y a la coordinación, no al modelo \cite{cemri2025mast}, y un estudio reciente encontró que, cuando el agente único ya resuelve más del 45\,\% de una tarea, agregar agentes da retornos negativos \cite{kim2025scaling}.
+Los sistemas multiagente basados en LLM asignan roles a varios agentes que conversan para resolver una tarea \cite{guo2024survey}. AutoGen los modela como conversaciones programables \cite{wu2024autogen}, GPTSwarm como grafos optimizables \cite{zhuge2024gptswarm}, y herramientas como Ruflo los ofrecen como \textit{swarms} con una reina y obreros \cite{ruflo}. Coordinar tiene un costo directo: Anthropic reporta que su sistema de investigación multiagente usa unas 15 veces los tokens de un chat \cite{anthropic2025multiagent}. También tiene un costo de fiabilidad: la taxonomía MAST atribuye la mayoría de los fallos de estos sistemas al diseño y a la coordinación \cite{cemri2025mast}. Además, cuando el agente único ya resuelve más del 45\,\% de una tarea, agregar agentes da retornos negativos \cite{kim2025scaling}.
 
-La pregunta de este trabajo es la que plantea la retroalimentación del curso: \emph{¿agregar agentes y comunicación mejora la calidad lo suficiente para justificar el aumento de costo?} Para responderla con la misma vara se necesita que todo lo demás quede fijo: el modelo, los \textit{prompts}, los límites de generación y la evaluación. Las contribuciones son tres:
+La pregunta de este trabajo es la que plantea la retroalimentación del curso: \emph{¿agregar agentes y comunicación mejora la calidad lo suficiente para justificar el aumento de costo?} Un primer estudio nuestro con un modelo de API (\texttt{deepseek-flash}) no pudo responderla. El agente único resolvió el 100\,\% de las tareas, así que solo podía mostrarse que coordinar cuesta más \cite{repo2026swarm}. Este trabajo cambia el diseño para que un \textit{swarm} tenga margen de mejorar. Las contribuciones son cuatro:
 \begin{itemize}
-\item Un orquestador reina--obreros en Python, agnóstico al modelo (la misma API sirve para DeepSeek y para modelos locales en Ollama) y al dominio (cada dominio es un conjunto de datos: roles, tareas, formatos y métrica), publicado con todos sus datos \cite{repo2026swarm}.
-\item Una comparación controlada de costo y calidad de tres topologías con $n\in\{2,4\}$ en tres dominios, con el uso real de tokens que reporta la API, costo, latencia, fallos y señales de coordinación.
-\item Hallazgos metodológicos que afectan a cualquier réplica: una etiqueta errónea de GSM8K, el truncamiento silencioso del contexto en Ollama y la discrepancia entre un juez LLM y la rúbrica.
+\item Un orquestador reina--obreros en Python, agnóstico al modelo y al dominio, publicado con todos sus registros \cite{repo2026swarm}.
+\item Un diseño de pares de capacidad con modelos locales, 100\,\% en GPU, que mide el cómputo (GPU-segundos) y la energía de cada llamada.
+\item Una comparación contra la línea base que suele faltar: la votación por mayoría del modelo débil con el mismo número de llamadas \cite{wang2023selfconsistency,li2024moreagents}. La comparación usa hipótesis registradas antes de ejecutar y pruebas pareadas con corrección de Holm \cite{holm1979}.
+\item Evidencia de que, con modelos pequeños, la ganancia viene de la reina y no del número de obreros.
 \end{itemize}
 
 \section{Trabajo relacionado}
 
-La Tabla~\ref{tab:rel} ubica este trabajo frente a los artículos base y a los estudios de escalamiento. AutoGen reportó que su conversación multiagente supera a GPT-4 solo en el conjunto completo de MATH (69.48\,\% frente a 55.18\,\%) \cite{wu2024autogen}. GPTSwarm optimiza las aristas del grafo, y AgentPrune muestra que muchas son redundantes: podarlas reduce entre 28.1\,\% y 72.8\,\% de los tokens con resultados comparables \cite{zhang2025agentprune}. MacNet escala colaboraciones a más de mil agentes en grafos acíclicos \cite{qian2025macnet}, y el muestreo con votación mejora con el número de agentes \cite{li2024moreagents}. En sentido contrario, Kim et~al.~\cite{kim2025scaling} miden que los sistemas centralizados amplifican los errores 4.4\x{} y los descentralizados 7.8\x{} respecto al agente único, y los errores de modelos distintos están correlacionados \cite{kim2025correlated}, lo que debilita la premisa de independencia del voto. Kapoor et~al.~\cite{kapoor2024agents} piden comparar agentes siempre contra su costo y con frentes de Pareto. Este trabajo sigue esa recomendación con topologías fijas, sin optimizarlas.
+La Tabla~\ref{tab:rel} ubica este trabajo. AutoGen reportó que su conversación multiagente supera a GPT-4 solo en MATH \cite{wu2024autogen}. AgentPrune muestra que muchas aristas de comunicación sobran \cite{zhang2025agentprune}, y MacNet escala la colaboración a más de mil agentes \cite{qian2025macnet}. Para un solo modelo, muestrear varias respuestas y votar mejora con el número de muestras \cite{wang2023selfconsistency,li2024moreagents}. Por el teorema del jurado de Condorcet \cite{condorcet1785}, la votación funciona mejor cuanto más independientes son los errores, pero los errores de los LLM están correlacionados \cite{kim2025correlated}. Kim et~al.~\cite{kim2025scaling} miden además que los sistemas multiagente amplifican los errores frente al agente único. Kapoor et~al.~\cite{kapoor2024agents} piden comparar agentes siempre contra su costo y contra líneas base simples. Este trabajo sigue esa recomendación con topologías fijas y cómputo medido en hardware.
 
 \begin{table}[t]
 \centering
@@ -69,195 +71,249 @@ La Tabla~\ref{tab:rel} ubica este trabajo frente a los artículos base y a los e
 \label{tab:rel}
 \footnotesize
 \setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}L{1.9cm}L{2.5cm}L{3.5cm}@{}}
+\begin{tabular}{@{}L{1.9cm}L{2.4cm}L{3.6cm}@{}}
 \toprule
 Trabajo & Organización & Qué mide \\
 \midrule
 AutoGen \cite{wu2024autogen} & conversación entre agentes & exactitud (MATH, otras) \\
 GPTSwarm \cite{zhuge2024gptswarm} & grafo optimizable & exactitud y costo de optimizar \\
 AgentPrune \cite{zhang2025agentprune} & poda de aristas & tokens frente a exactitud \\
+Votación \cite{wang2023selfconsistency,li2024moreagents} & muestras independientes & exactitud frente a número de muestras \\
 MAST \cite{cemri2025mast} & 7 marcos existentes & 14 modos de fallo \\
 Kim et~al. \cite{kim2025scaling} & 5 arquitecturas & escalamiento y amplificación de errores \\
-Este trabajo & único, jerárquica, malla & costo real, calidad, latencia y fallos al variar $n$ \\
+Este trabajo & único, jerárquica, malla; reina débil o fuerte & exactitud, GPU-segundos y energía frente a votación con igual número de llamadas \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \section{Metodología}
 
-\subsection{Orquestador}
+\subsection{Orquestador y topologías}
 
-Un agente es un rol, unas instrucciones y un acceso a un LLM a través de una interfaz única, \texttt{LLM.complete()}, que oculta el proveedor. Las tres topologías (Fig.~\ref{fig:topo}) comparten las etapas:
+Un agente es un rol, unas instrucciones y un acceso a un LLM a través de una interfaz única, \texttt{LLM.complete()}, que oculta el proveedor. Las topologías (Fig.~\ref{fig:topo}) comparten cuatro etapas:
 \begin{enumerate}
-\item \textbf{Plan.} La reina reparte la tarea y devuelve una lista JSON con una subtarea por obrero. Si el JSON es inválido o no asigna exactamente una subtarea a cada obrero, se registra el fallo y cada obrero recibe la tarea completa.
+\item \textbf{Plan.} La reina reparte la tarea en una lista JSON con una subtarea por obrero. Si el JSON es inválido o no asigna una subtarea a cada obrero, se registra el fallo y cada obrero recibe la tarea completa.
 \item \textbf{Trabajo.} Cada obrero resuelve su subtarea.
-\item \textbf{Revisión} (solo malla). Cada obrero lee los borradores de todos y revisa el suyo.
+\item \textbf{Revisión} (solo en la malla). Cada obrero lee los borradores de todos y revisa el suyo.
 \item \textbf{Integración.} La reina combina las contribuciones en la respuesta final.
 \end{enumerate}
-El agente único responde directamente con el mismo formato final. Los obreros de los dominios matemáticos cierran con una línea \texttt{\#\#\#\# <número>}, lo que permite saber si algún obrero tenía la respuesta correcta y si la reina la conservó.
+El agente único responde directamente con el mismo formato final. En los dominios matemáticos, los obreros cierran con una línea \texttt{\#\#\#\# <número>}. Así se sabe si algún obrero acertó y si la reina conservó la respuesta correcta.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figs/topologias.pdf}
-\caption{Topologías comparadas con $n=4$ obreros. R es la reina; en la malla, las aristas naranjas son la ronda de revisión entre obreros.}
+\caption{Topologías con $n=4$ obreros. R es la reina; en la malla, las aristas naranjas forman la ronda de revisión entre obreros.}
 \label{fig:topo}
 \end{figure}
 
-\subsection{Modelo de costo}
+\subsection{Diseño: pares de capacidad y líneas base}
 
-Con $n$ obreros, la jerárquica hace $n+2$ llamadas e intercambia $2n$ mensajes; la malla hace $2n+2$ llamadas y $n(n+1)$ mensajes. El costo de una corrida es
+Cada familia aporta un modelo fuerte y uno débil: Qwen~2.5 de 3B y 1.5B \cite{qwen2025} y Llama~3.2 de 3B y 1B \cite{llama2024}, servidos con Ollama \cite{ollama}. Un \textit{swarm débil} usa el modelo débil en todos los agentes. Un \textit{swarm mixto} usa el fuerte solo en la reina. Ambos se ejecutan en topología jerárquica y en malla con $n\in\{2,4\}$ obreros. Las líneas base son el agente único fuerte, el agente único débil y la \textit{votación@k}: la respuesta más frecuente entre $k$ muestras independientes del modelo débil. La votación se empareja con cada \textit{swarm} por número de llamadas. La jerárquica con $n=2$ hace 4 llamadas y se compara con votación@3; la jerárquica con $n=4$ y la malla con $n=2$ hacen 6 y se comparan con votación@5; la malla con $n=4$ hace 10 y se compara con votación@9. Con $n$ obreros, la jerárquica hace $n+2$ llamadas e intercambia $2n$ mensajes, y la malla hace $2n+2$ llamadas y $n(n+1)$ mensajes. Si cada borrador mide $w$ tokens y el resto del \textit{prompt} $b$, la revisión de la malla lee
 \begin{equation}
-C=\sum_{k\in\text{llamadas}}\left(t^{\text{in}}_k\,p^{\text{in}}+t^{\text{out}}_k\,p^{\text{out}}\right),
-\label{eq:cost}
-\end{equation}
-con los tokens $t$ que reporta la API y los precios de lista de \texttt{deepseek-flash} consultados el 7 de octubre de 2026: $p^{\text{in}}=0.30$ y $p^{\text{out}}=1.20$ USD por millón de tokens \cite{deepseek2026pricing}. Se usa el precio de lista (pico, sin caché) para comparar configuraciones, porque el precio facturado depende de la hora del día y de lo que ya estuviera en caché. Si cada borrador mide $w$ tokens y el resto del \textit{prompt} $b$, la integración lee $b+nw$ tokens, mientras que la revisión hace $n$ llamadas de $b+nw$ tokens cada una:
-\begin{equation}
-t^{\text{in}}_{\text{rev}}\approx n\,b+n^2 w ,
+t^{\text{in}}_{\text{rev}}\approx n\,b+n^2 w
 \label{eq:rev}
 \end{equation}
-de modo que el costo de la malla crece de forma cuadrática, no exponencial, con $n$.
+tokens, así que su costo crece de forma cuadrática con $n$.
+
+\subsection{Hipótesis registradas}
+
+Antes de la primera corrida se fijaron ocho hipótesis y su prueba:
+\begin{itemize}
+\item \textbf{H1:} el costo crece con las llamadas y los mensajes.
+\item \textbf{H2:} el \textit{swarm} débil cambia la exactitud del agente débil, en cualquier dirección.
+\item \textbf{H3:} un \textit{swarm} supera a la votación con igual número de llamadas.
+\item \textbf{H4:} el \textit{swarm} mixto alcanza al modelo fuerte solo.
+\item \textbf{H5:} la reina fuerte reduce los fallos de coordinación.
+\item \textbf{H6:} se describe cómo la reina conserva o pierde respuestas correctas.
+\item \textbf{H7:} los errores del modelo débil están correlacionados.
+\item \textbf{H8:} ambas familias ordenan igual las configuraciones.
+\end{itemize}
+También se fijó una regla de calibración. Un dominio es informativo para una familia si el agente débil resuelve entre el 10\,\% y el 90\,\% de 20 problemas de calibración, distintos de los de evaluación.
 
 \subsection{Dominios}
 
-Cada dominio es un conjunto de datos y la Tabla~\ref{tab:dom} los resume. GSM8K-Platinum es la partición de prueba de GSM8K \cite{cobbe2021gsm8k} con las etiquetas erróneas corregidas \cite{vendrow2025platinum}. MATH-500 \cite{lightman2024verify} es un subconjunto del conjunto de prueba de MATH \cite{hendrycks2021math}; se tomaron solo problemas de nivel 5 con respuesta entera para mantener la coincidencia exacta. Este dominio se agregó después de observar el techo en GSM8K, así que su hipótesis es \textit{post hoc}. La tarea abierta es el caso de Cartagena propuesto en la presentación del curso: un viaje de 3 días para un estudiante con 600\,000 COP y alojamiento económico.
+La Tabla~\ref{tab:dom} resume los dominios. GSM8K-Platinum es la partición de prueba de GSM8K \cite{cobbe2021gsm8k} con las etiquetas erróneas corregidas \cite{vendrow2025platinum}. MATH-500 \cite{lightman2024verify} es un subconjunto de MATH \cite{hendrycks2021math}; se usaron problemas de nivel~5 con respuesta entera. La tarea abierta es el caso de Cartagena: un viaje de 3 días para un estudiante con 600\,000 COP. La calibración dejó GSM8K como informativo en ambas familias. MATH queda en nivel~5 porque la regla solo lo bajaba si ambas familias quedaban por debajo del 10\,\%, y solo Llama quedó en el piso (0\,\%). Por limitación de tiempo de cómputo, y antes de analizar resultados, MATH se redujo a 20 problemas con una repetición por \textit{swarm} (enmienda~B).
 
 \begin{table}[t]
 \centering
-\caption{Dominios, tareas y medida de calidad}
+\caption{Dominios y calibración (exactitud del agente débil en 20 problemas de calibración)}
 \label{tab:dom}
 \footnotesize
 \setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}L{1.75cm}L{3.4cm}L{2.75cm}@{}}
+\begin{tabular}{@{}L{1.55cm}L{2.55cm}L{1.6cm}cc@{}}
 \toprule
-Dominio & Tareas (semilla fija) & Calidad \\
+Dominio & Evaluación & Calidad & Qwen & Llama \\
 \midrule
-GSM8K-Platinum & 10 problemas de aritmética escolar & coincidencia exacta \\
-MATH-500 niv.~5 & 10 de 74 problemas con respuesta entera & coincidencia exacta \\
-Cartagena & 1 plan de viaje abierto & rúbrica binaria de 7 criterios \\
+GSM8K-Platinum & 50 problemas; 2 rep. por \textit{swarm} & coincidencia exacta & 0.55 & 0.55 \\
+MATH-500 niv.~5 & 20 problemas; 1 rep. por \textit{swarm} & coincidencia exacta & 0.15 & 0.00 \\
+Cartagena & 1 plan; 2 rep. por configuración & rúbrica de 7 criterios & -- & -- \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Protocolo}
+\subsection{Protocolo y medición}
 
-El experimento principal usa \texttt{deepseek-flash} (DeepSeek-V4.1-Flash) a través de la API oficial, con el razonamiento extendido desactivado; ninguna llamada generó tokens de razonamiento. Todas las configuraciones comparten temperatura 0.7, un máximo de 2\,048 tokens de salida y los mismos \textit{prompts}. Un piloto con 1\,024 tokens truncó dos de seis llamadas de la malla en Cartagena, por lo que se descartó y se subió el límite. Repeticiones: en GSM8K, 3 muestras del agente único y 2 de cada \textit{swarm} por problema; en MATH, 3 y 1, porque 2 repeticiones no cabían en el presupuesto; en Cartagena, 3 por configuración. Cada corrida tiene un identificador derivado de su especificación, se ejecuta en orden aleatorio con semilla fija (cuatro a la vez) y queda registrada con cada una de sus llamadas. Un tope de gasto de USD~0.50 detenía la ejecución si el gasto más la proyección del resto lo superaba.
+Cada modelo se verificó al 100\,\% en la VRAM de una RTX~3050 Laptop de 4\,GB, sin descarga a CPU, con ventana de 8\,192 tokens. Para que el modelo de 3B de Llama cupiera hizo falta \textit{flash attention} y una caché KV de 8 bits; sin ellas corría al 90\,\% en GPU. Se cargaba un solo modelo a la vez, se atendía una sola llamada a la vez, y el portátil estuvo conectado a la corriente en modo de rendimiento todo el experimento. Todas las configuraciones comparten temperatura 0.7, 1\,024 tokens máximos de salida y los mismos \textit{prompts}. El agente fuerte tiene 3 muestras por problema y el débil 9, de las que salen las votaciones. El cómputo de una corrida se mide en \textbf{GPU-segundos}: el tiempo de procesamiento del \textit{prompt} más el de generación que reporta Ollama. La \textbf{energía} es la integral de la potencia de la GPU muestreada a 20\,Hz por NVML. La potencia en reposo fue de 4.3\,W, y las cargas de modelo se registran aparte. Cada corrida tiene un identificador derivado de su especificación, se ejecuta en orden aleatorio con semilla fija y se puede reanudar.
 
-\subsection{Evaluación}
+\subsection{Evaluación y estadística}
 
-En los dominios matemáticos la calidad es la coincidencia exacta del número final, sin juez LLM. Cartagena se califica con una rúbrica de siete criterios binarios con reglas de decisión explícitas (itinerario por día, presupuesto con total, total dentro del límite, alojamiento económico, dos riesgos con mitigación, consistencia interna y lugares concretos). Las 15 respuestas se exportaron sin modelo ni arquitectura, en orden aleatorio, y las calificó a ciegas un evaluador LLM distinto del generador (Claude Opus 5.5) antes de abrir la clave; \textbf{no es una evaluación humana}. Como análisis secundario, el propio \texttt{deepseek-flash} actuó como juez, lo que introduce sesgo de autopreferencia \cite{panickssery2024selfpref,zheng2023judging}. Se registran fallos técnicos (error, \textit{timeout}, plan inválido, formato, truncamiento de la salida o del contexto) y, en los dominios matemáticos, si algún obrero acertó, si la reina conservó o perdió la respuesta correcta y si la revisión de la malla mejoró o empeoró a los obreros. Las comparaciones usan intervalos \textit{bootstrap} al 95\,\% y la prueba exacta de McNemar \cite{mcnemar1947} sobre los mismos problemas.
+En los dominios matemáticos, la calidad es la coincidencia exacta del número final. Cartagena se califica con una rúbrica de siete criterios binarios con reglas de decisión explícitas:
+\begin{itemize}
+\item itinerario por día;
+\item presupuesto con total;
+\item total dentro del límite;
+\item alojamiento económico;
+\item dos riesgos con su mitigación;
+\item consistencia interna;
+\item lugares concretos.
+\end{itemize}
+El plan registrado preveía dos evaluadores humanos. Por decisión de los autores, las 40 respuestas, exportadas sin modelo ni configuración y en orden aleatorio, las calificó a ciegas un evaluador LLM (Claude Opus 5.5) antes de abrir la clave (enmienda~C). \textbf{No es una evaluación humana} y tiene las limitaciones conocidas de los LLM como jueces \cite{zheng2023judging}. Las diferencias entre configuraciones se calculan por problema, emparejadas, con intervalos \textit{bootstrap} al 95\,\% y una prueba de permutación con cambio de signo. Las 80 comparaciones registradas se corrigen con Holm \cite{holm1979}.
 
 \section{Resultados}
 
-\subsection{Costo}
-
-La Tabla~\ref{tab:main} resume las 195 corridas. Las llamadas y los mensajes coincidieron exactamente con las fórmulas en todas las corridas. Frente al agente único, el costo por corrida a precio de lista fue de 2.7\x{} a 8.8\x{} en la jerárquica y de 4.0\x{} a 16.6\x{} en la malla (Fig.~\ref{fig:cost}). De $n=2$ a $n=4$, la jerárquica sumó entre 1.9 y 3.7 veces el costo del agente único, y la malla entre 5.4 y 8.9 veces. La Fig.~\ref{fig:stage} muestra de dónde sale esa diferencia: con $n=4$, la ronda de revisión concentra el 55\,\% de los tokens de la malla en GSM8K, el 69\,\% en MATH y el 64\,\% en Cartagena, como predice la ec.~\eqref{eq:rev}. La latencia, medida solo dentro de la API, creció de 2.3\x{} a 10.4\x{}, porque las llamadas de una corrida son secuenciales. El \textit{prompt} más largo fue de 8\,129 tokens (MATH, malla con $n=4$, revisión).
+Se ejecutaron 3\,640 corridas de evaluación y 160 de calibración. Ninguna tuvo un fallo de infraestructura ni truncó el contexto; el \textit{prompt} más largo fue de 4\,281 tokens. La matriz completa tomó 10.0 horas de ejecución. La Tabla~\ref{tab:main} reúne la exactitud y el cómputo de todas las configuraciones.
 
 \begin{table*}[t]
 \centering
-\caption{Resultados por dominio y configuración (\texttt{deepseek-flash}). Calidad con IC \textit{bootstrap} al 95\,\%; costo a precio de lista en milésimas de USD por corrida; ``\x'' es el cociente frente al agente único del mismo dominio.}
+\caption{Exactitud (Ex.) y GPU-segundos por corrida (GPU-s) por familia y dominio, y puntaje de la rúbrica en Cartagena (evaluador LLM a ciegas). La votación@$k$ usa $k$ muestras del modelo débil. ``Jer'' es jerárquica; ``débil'' y ``mixto'' indican la reina débil o fuerte, con obreros siempre débiles.}
 \label{tab:main}
 \footnotesize
-\setlength{\tabcolsep}{4.2pt}
-\begin{tabular}{@{}llrcrrrrrrrr@{}}
+\setlength{\tabcolsep}{4.6pt}
+\begin{tabular}{@{}lrrrrrrrrrr@{}}
 \toprule
-Dominio & Config. & Corridas & Calidad [IC 95\,\%] & Llamadas & Mensajes & Tokens & \x & Costo (mUSD) & \x & Latencia (s) & \x \\
+ & \multicolumn{2}{c}{Qwen, GSM8K} & \multicolumn{2}{c}{Llama, GSM8K} & \multicolumn{2}{c}{Qwen, MATH} & \multicolumn{2}{c}{Llama, MATH} & \multicolumn{2}{c}{Cartagena (rúbrica)} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}\cmidrule(l){10-11}
+Configuración & Ex. & GPU-s & Ex. & GPU-s & Ex. & GPU-s & Ex. & GPU-s & Qwen & Llama \\
 \midrule
-GSM8K-Platinum & único  & 30 & 1.00 [1.00, 1.00] & 1  & 0  & 178    & 1.0  & 0.12  & 1.0  & 1.3  & 1.0  \\
-               & jer-2  & 20 & 1.00 [1.00, 1.00] & 4  & 4  & 1\,072 & 6.0  & 0.61  & 5.1  & 5.2  & 4.1  \\
-               & jer-4  & 20 & 1.00 [1.00, 1.00] & 6  & 8  & 1\,818 & 10.2 & 1.06  & 8.8  & 8.2  & 6.5  \\
-               & malla-2 & 20 & 1.00 [1.00, 1.00] & 6  & 6  & 1\,736 & 9.7  & 0.93  & 7.7  & 7.8  & 6.2  \\
-               & malla-4 & 20 & 1.00 [1.00, 1.00] & 10 & 20 & 4\,005 & 22.5 & 2.00  & 16.6 & 13.2 & 10.4 \\
-\midrule
-MATH-500 niv.~5 & único  & 30 & 1.00 [1.00, 1.00] & 1  & 0  & 864     & 1.0  & 0.92 & 1.0 & 4.1  & 1.0 \\
-                & jer-2  & 10 & 1.00 [1.00, 1.00] & 4  & 4  & 3\,518  & 4.1  & 2.46 & 2.7 & 9.5  & 2.3 \\
-                & jer-4  & 10 & 1.00 [1.00, 1.00] & 6  & 8  & 5\,980  & 6.9  & 4.20 & 4.6 & 16.1 & 3.9 \\
-                & malla-2 & 10 & 1.00 [1.00, 1.00] & 6  & 6  & 6\,019  & 7.0  & 3.68 & 4.0 & 13.1 & 3.2 \\
-                & malla-4 & 10 & 1.00 [1.00, 1.00] & 10 & 20 & 16\,763 & 19.4 & 8.68 & 9.4 & 25.3 & 6.1 \\
-\midrule
-Cartagena & único  & 3 & 1.00 [1.00, 1.00] & 1  & 0  & 879     & 1.0  & 0.98  & 1.0  & 6.2  & 1.0 \\
-          & jer-2  & 3 & 0.81 [0.71, 0.86] & 4  & 4  & 4\,198  & 4.8  & 3.39  & 3.5  & 15.7 & 2.5 \\
-          & jer-4  & 3 & 1.00 [1.00, 1.00] & 6  & 8  & 6\,944  & 7.9  & 5.37  & 5.5  & 27.5 & 4.5 \\
-          & malla-2 & 3 & 0.95 [0.86, 1.00] & 6  & 6  & 9\,645  & 11.0 & 6.79  & 7.0  & 27.8 & 4.5 \\
-          & malla-4 & 3 & 1.00 [1.00, 1.00] & 10 & 20 & 23\,750 & 27.0 & 14.13 & 14.5 & 50.9 & 8.3 \\
+\tabinput{tabs/main.tex}
 \bottomrule
 \end{tabular}
 \end{table*}
 
+\subsection{Costo (H1)}
+
+Las llamadas y los mensajes siguen las fórmulas de la sección anterior. Frente al agente débil, los \textit{swarms} usaron entre 1.8\x{} y 20.7\x{} los GPU-segundos en GSM8K y MATH, y hasta 26\x{} los tokens. En Cartagena usaron entre 3.4\x{} y 15.3\x{} los GPU-segundos. La malla con $n=4$ fue siempre la configuración más cara de su familia y equipo (Fig.~\ref{fig:cost}). La energía siguió a los GPU-segundos, con 55 a 73\,J por GPU-segundo en todas las configuraciones, así que el orden de costos es el mismo en ambas medidas. El costo es estructural: ambas familias ordenaron las configuraciones por costo casi igual (Kendall $\tau$ de 0.82 a 0.96, $p<0.001$).
+
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{figs/costo_vs_n.pdf}
-\caption{Costo por corrida relativo al agente único al pasar de $n=2$ a $n=4$ obreros. En los tres dominios, la malla crece más del doble de rápido que la jerárquica.}
+\caption{GPU-segundos por corrida relativos al agente único débil al pasar de $n=2$ a $n=4$ obreros. La línea punteada es el agente único fuerte. La malla (línea discontinua) crece más rápido que la jerárquica, y la reina fuerte añade costo.}
 \label{fig:cost}
 \end{figure*}
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{figs/tokens_por_etapa.pdf}
-\caption{Tokens promedio por corrida según la etapa. La revisión de la malla domina el costo con $n=4$.}
-\label{fig:stage}
-\end{figure*}
+\subsection{Calidad frente a cómputo (H2--H4)}
 
-\subsection{Calidad}
-
-El agente único resolvió los 10 problemas de GSM8K-Platinum y los 10 de MATH en sus 30 muestras de cada dominio, y lo mismo hicieron las 80 y 40 corridas de \textit{swarm}. Con ambos dominios en el techo no hay pares discordantes para McNemar ni margen para que la coordinación mejore el resultado. En Cartagena, la rúbrica dio 1.00 al agente único y a jer-4 y malla-4, 0.95 a malla-2 y 0.81 a jer-2, la única diferencia con un intervalo que excluye el cero (de $-0.29$ a $-0.14$ en tres repeticiones). Las tres respuestas de jer-2 fallaron en riesgos con mitigación o en la consistencia del presupuesto, y una de ellas mencionaba ``la versión del planificador'', un residuo de la integración. La Fig.~\ref{fig:pareto} ubica cada configuración en el plano costo--calidad: en los tres dominios el agente único está solo en el frente de Pareto.
-
-El juez LLM no coincidió con la rúbrica. Dio 0.86 al agente único y 1.00 a malla-4, es decir, favoreció a las configuraciones con más agentes, al contrario que la rúbrica. En el criterio de riesgos marcó cumplidas el 47\,\% de las respuestas frente al 80\,\% de la rúbrica ($\kappa=0.36$ \cite{cohen1960}). Con un solo modelo que se juzga a sí mismo, esa puntuación no sirve como medida de calidad.
+La Fig.~\ref{fig:acc} pone cada configuración en el plano exactitud--cómputo, y la Tabla~\ref{tab:contr} resume las comparaciones registradas.
+\begin{itemize}
+\item \textbf{H2.} Ningún \textit{swarm} débil mejoró al agente débil en GSM8K, con diferencias de $-0.11$ a $-0.03$. En MATH con Qwen, tres de las cuatro formas sumaron $+0.11$, pero los intervalos incluyen el cero.
+\item \textbf{H3.} Frente a la votación con el mismo número de llamadas, los \textit{swarms} débiles quedaron por debajo en GSM8K: de $-0.08$ a $-0.15$ con Qwen y de $-0.10$ a $-0.19$ con Llama. Seis de las ocho diferencias tienen $p<0.05$ sin corregir, pero ninguna sobrevive a Holm. Los \textit{swarms} mixtos empataron con la votación.
+\item \textbf{H4.} El modelo fuerte solo fue mejor que cualquier \textit{swarm} mixto: de $0.07$ a $0.12$ puntos más con Qwen y de $0.20$ a $0.23$ con Llama, mientras los mixtos usaban entre 2.4\x{} y 5.9\x{} (Qwen) y entre 6.4\x{} y 12.0\x{} (Llama) sus GPU-segundos. Son las únicas diferencias significativas tras Holm: 3 de 80, todas de Llama en GSM8K, con $p_{\text{Holm}}$ entre 0.008 y 0.031.
+\end{itemize}
+En 4 de las 6 combinaciones de familia y dominio, la mejor configuración fue el agente único fuerte, con 1.5\x{} a 1.7\x{} el cómputo del débil. Las otras dos son Llama en MATH, en el piso (máximo 0.15), y Qwen en Cartagena (0.57 con dos respuestas por configuración); en ambas, un \textit{swarm} queda primero dentro del ruido.
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=\textwidth]{figs/calidad_vs_costo.pdf}
-\caption{Calidad frente al costo relativo (escala logarítmica), con IC \textit{bootstrap} al 95\,\%. Cartagena se califica con la rúbrica aplicada a ciegas por un evaluador LLM, no humano.}
-\label{fig:pareto}
+\includegraphics[width=\textwidth]{figs/exactitud_vs_gpu.pdf}
+\caption{Exactitud frente a GPU-segundos por corrida (escala logarítmica). La línea discontinua es la votación del modelo débil con $k=1,3,5,7,9$ muestras. Los \textit{swarms} débiles (azul) quedan por debajo de esa curva y los mixtos (naranja) sobre ella, pero el agente único fuerte (cuadrado negro) los domina con menos cómputo.}
+\label{fig:acc}
 \end{figure*}
-
-\subsection{Coordinación y fallos}
-
-\texttt{deepseek-flash} no tuvo ningún fallo técnico ni de coordinación en las 132 corridas de \textit{swarm}: todos los planes fueron JSON válido, todas las respuestas tuvieron el formato pedido y ninguna salida se truncó. En los dominios matemáticos la reina conservó la respuesta correcta en el 100\,\% de los casos. Los obreros sí se equivocaron: en 8 de las 40 corridas de MATH (y en 1 de las 80 de GSM8K) al menos un obrero dio un número incorrecto o sin formato; en 6 de los 8 casos fue el rol escéptico. En las 5 corridas de malla de MATH donde ocurrió, la revisión corrigió a todos los obreros equivocados. La redundancia funciona como mecanismo de corrección, pero solo repara errores que el agente único no cometió.
-
-\subsection{Portabilidad}
-
-El mismo código ejecutó un piloto de 20 corridas (108 llamadas) con \texttt{llama3.2:3b} y \texttt{qwen2.5:3b} en Ollama, en una GPU RTX 3050 de 4\,GB, cambiando solo la configuración. Esto muestra la agnosticidad de ingeniería. La Tabla~\ref{tab:fail} compara los modos de fallo y su correspondencia aproximada con MAST. Con una sola tarea por configuración, la comparación entre modelos es exploratoria: los modelos de 3B fallaron en el formato del plan y perdieron una respuesta correcta en la integración, modos que \texttt{deepseek-flash} no presentó. La latencia local no se compara con la de la API porque son infraestructuras distintas.
 
 \begin{table}[t]
 \centering
-\caption{Fallos en corridas de \textit{swarm} y modo MAST más cercano \cite{cemri2025mast}}
-\label{tab:fail}
-\footnotesize
-\setlength{\tabcolsep}{2.6pt}
-\begin{tabular}{@{}L{2.3cm}cccL{1.85cm}@{}}
+\caption{Diferencias de exactitud por problema (rango sobre las cuatro formas de \textit{swarm}), comparaciones con $p<0.05$ sin corregir y significativas tras Holm (de 80 en total)}
+\label{tab:contr}
+\scriptsize
+\setlength{\tabcolsep}{1.6pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{@{}lL{1.55cm}ccccrr@{}}
 \toprule
-Fallo & DeepSeek & Llama 3B & Qwen 3B & MAST \\
- & (132) & (8) & (8) & \\
+ & Comparación & \multicolumn{2}{c}{GSM8K} & \multicolumn{2}{c}{MATH} & $p{<}.05$ & Holm \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}
+ & & Qwen & Llama & Qwen & Llama & & \\
 \midrule
-Plan JSON inválido & 0 & 2 & 0 & FM-1.1 (parcial) \\
-Roles del plan & 0 & 1 & 0 & FM-1.1 (parcial) \\
-Respuesta final truncada & 0 & 0 & 1 & --- \\
-Reina pierde la correcta & 0 & 1 & 1 & FM-2.5/3.3 (candidato) \\
-Contexto truncado & 0 & 0 & 0 & FM-1.4 (directo) \\
+\tabinput{tabs/contrasts.tex}
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\subsection{Coordinación (H5, H6)}
+
+El único cambio que mejoró la exactitud fue la reina. Con la misma forma y los mismos obreros débiles, la reina fuerte subió la exactitud en GSM8K de $+0.12$ a $+0.17$ con Qwen y de $+0.11$ a $+0.19$ con Llama (seis de ocho con $p\le 0.06$ sin corregir; ninguna tras Holm). El mecanismo difiere por familia (Tabla~\ref{tab:coord}, Fig.~\ref{fig:coord}):
+\begin{itemize}
+\item \textbf{Llama.} La reina de 1B produjo un plan inválido en el 81--92\,\% de las corridas, de modo que su \textit{swarm} débil mide sobre todo el modo de respaldo, en que cada obrero resuelve la tarea completa. Con reina de 3B, los planes inválidos bajaron al 22--39\,\%. Es el modo FM-1.1 de MAST, desobedecer la especificación \cite{cemri2025mast}.
+\item \textbf{Qwen.} Los planes ya eran válidos, y la ganancia está en la integración: la reina fuerte conservó la respuesta correcta de un obrero en el 67--73\,\% de las corridas, frente al 53--58\,\% de la débil.
+\end{itemize}
+En GSM8K, la reina descartó la respuesta correcta de un obrero en el 3--29\,\% de las corridas. La revisión de la malla aumentó el número de obreros correctos en el 20--43\,\% de las corridas y lo redujo en el 8--21\,\%. La mejora interna existe, pero la integración no siempre la aprovecha.
+
+\begin{table}[t]
+\centering
+\caption{Coordinación en GSM8K: fracción de corridas (rango sobre las cuatro formas) y modo MAST más cercano}
+\label{tab:coord}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{@{}L{2.25cm}ccccL{1.2cm}@{}}
+\toprule
+ & \multicolumn{2}{c}{Qwen} & \multicolumn{2}{c}{Llama} & \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Evento & débil & mixto & débil & mixto & MAST \\
+\midrule
+\tabinput{tabs/coordination.tex}
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Hallazgos metodológicos}
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figs/coordinacion.pdf}
+\caption{Qué hizo la reina con la respuesta de los obreros en GSM8K, por configuración. Los rombos marcan la fracción de planes inválidos.}
+\label{fig:coord}
+\end{figure}
 
-Tres problemas habrían invalidado resultados sin instrumentación. Primero, en el piloto local un problema del GSM8K original tenía la etiqueta 2\,280 cuando la respuesta correcta es 2\,180; Qwen respondió 2\,180 en todas las configuraciones y se le contaba como error. GSM8K-Platinum corrige ese ítem \cite{vendrow2025platinum}. Segundo, Ollama trunca en silencio los \textit{prompts} que exceden su ventana: con la configuración por defecto, un \textit{prompt} de unos 9\,500 tokens se procesó como unos 2\,050. Por eso se fijó la ventana en 8\,192 tokens y se marcó como fallo toda llamada con más de 5 caracteres por token contado; el \textit{prompt} de 8\,129 tokens de la malla en MATH no habría cabido junto con la salida en esa ventana (con otro tokenizador la cifra es solo indicativa). Tercero, el juez LLM y la rúbrica dieron órdenes opuestos.
+\subsection{Votación y correlación de errores (H7) y agnosticidad (H8)}
+
+Las muestras del modelo débil cometen errores correlacionados: la correlación media entre pares de muestras fue de $\phi=0.24$ a $0.45$. Por eso la votación ayuda pero se estanca. En Qwen y GSM8K pasó de 0.62 a 0.74 con $k=5$ y bajó a 0.72 con $k=9$, por debajo del 0.77 que predice Condorcet con errores independientes. Cuando la exactitud individual es menor que 0.5, el modelo binario de Condorcet no sirve de referencia, porque las respuestas erróneas se reparten entre muchos números y la mayoría relativa aún acierta. En cuanto a la agnosticidad, ambas familias ordenaron igual las configuraciones por costo. Por calidad coincidieron en GSM8K ($\tau=0.58$, $p=0.023$), pero no en MATH ($\tau=-0.13$) ni en Cartagena ($\tau=0.15$).
+
+\subsection{Cartagena}
+
+Con la rúbrica, el agente único obtuvo 0.61 de media, la malla 0.48 y la jerárquica 0.39. Trece de las 40 respuestas llegaron al límite de 1\,024 tokens, casi todas de \textit{swarms}, y obtuvieron 0.40 frente a 0.51 de las completas. El límite era igual para todos, y truncar es otro costo de integrar más texto. Casi ninguna respuesta propuso dos riesgos con mitigación (1 de 40) o un presupuesto consistente (4 de 40), y los modelos de 1--3B cometieron errores de hecho sobre la ciudad. Con dos respuestas por configuración y un solo evaluador LLM, este resultado es descriptivo.
 
 \section{Discusión}
 
-Para \texttt{deepseek-flash}, la respuesta a la pregunta de investigación es negativa en las tres tareas: agregar agentes multiplicó el costo entre 2.7\x{} y 16.6\x{}, los tokens entre 4.1\x{} y 27.0\x{} y la latencia entre 2.3\x{} y 10.4\x{}, sin mejorar la calidad. La configuración más barata dentro del 95\,\% de la mejor calidad fue el agente único en los tres dominios. El resultado es coherente con el techo de capacidad de Kim et~al. \cite{kim2025scaling}: el modelo base ya resuelve estas tareas, así que la coordinación solo puede costar. La malla es la peor apuesta: con $n=4$ costó entre 1.9\x{} y 2.6\x{} lo que la jerárquica para la misma calidad, y su revisión crece con $n^2$.
+La respuesta a la pregunta de investigación, con modelos de 1 a 3B, es negativa: agregar agentes y comunicación no compensó su costo. Hay dos alternativas más simples:
+\begin{itemize}
+\item Si hay un modelo más capaz disponible, usarlo solo fue mejor y entre 2.4\x{} y 12.0\x{} más barato que construir un \textit{swarm} alrededor de él.
+\item Si solo hay un modelo débil, votar entre $k$ muestras fue al menos tan bueno como un \textit{swarm} con el mismo número de llamadas.
+\end{itemize}
+El resultado es coherente con Kim et~al.~\cite{kim2025scaling}: el agente débil resolvía el 46--62\,\% de GSM8K, por encima del umbral del 45\,\% donde agregar agentes deja de rendir.
 
-El caso en que un \textit{swarm} podría pagar su costo es el contrario: tareas en que el agente único falla con frecuencia y de forma no correlacionada. La corrección interna observada en MATH indica que el mecanismo existe, pero la correlación de errores entre modelos \cite{kim2025correlated} y la amplificación medida en sistemas reales \cite{kim2025scaling} sugieren que la ganancia no está garantizada. La implicación práctica es medir primero al agente único y escalar la coordinación solo cuando la tarea lo justifique.
+Este estudio también muestra dónde está el problema. Los obreros acertaban con frecuencia, y la revisión de la malla los corregía. Lo que fallaba era la coordinación: planes que no seguían el formato y respuestas correctas descartadas al integrar. La única intervención que mejoró la exactitud fue darle a la reina un modelo más capaz. Para quien diseñe un \textit{swarm} con modelos pequeños, la implicación práctica es invertir el cómputo en el coordinador o en un modelo mejor, no en más obreros. Además, todo \textit{swarm} debería compararse contra la votación con el mismo número de llamadas.
+
+Frente al primer estudio con \texttt{deepseek-flash}, la conclusión de que el agente único es la mejor opción se mantiene. Pero ahora no se debe a un efecto techo: los \textit{swarms} tenían margen para mejorar y no lo aprovecharon.
 
 \section{Limitaciones y trabajo futuro}
 
-Ambos dominios matemáticos quedaron en el techo, así que el estudio mide bien el costo de coordinar pero no puede mostrar ganancias de calidad. La matriz completa se ejecutó con un solo modelo; los dos modelos locales solo hicieron un piloto, y la agnosticidad empírica entre modelos queda sin probar. La tarea abierta es una sola, con tres repeticiones, y su calidad proviene de un único evaluador LLM a ciegas, no de evaluadores humanos. MATH usó una repetición por \textit{swarm} y se agregó después de ver el techo en GSM8K. La API no admite semilla, y GSM8K y MATH pueden estar en los datos de entrenamiento. Como trabajo futuro proponemos tareas en que el agente único falle (por ejemplo, problemas de competencia más difíciles), la matriz completa con varios modelos, evaluación humana con dos evaluadores y topologías podadas o adaptativas \cite{zhang2025agentprune,zhuge2024gptswarm}.
+\begin{itemize}
+\item \textbf{Alcance de los modelos.} Solo se probaron modelos de 1 a 3B en una GPU de 4\,GB, con una temperatura y \textit{prompts} no ajustados por modelo. Modelos mayores o \textit{prompts} específicos podrían comportarse distinto.
+\item \textbf{Muestras pequeñas.} Las muestras son de 50 y 20 problemas, así que la mayoría de las comparaciones tiene poca potencia, y Holm sobre 80 comparaciones es conservador. Llama en MATH está en el piso y aporta poca información.
+\item \textbf{Modo de respaldo.} Cuando un plan es inválido, cada obrero recibe la tarea completa. Por eso el \textit{swarm} débil de Llama se parece a muestrear varias veces e integrar.
+\item \textbf{Cartagena.} Es una sola tarea, con un evaluador LLM en lugar de dos humanos y respuestas truncadas en 1\,024 tokens.
+\item \textbf{Energía.} Se midió solo la de la tarjeta gráfica.
+\item \textbf{Contaminación.} GSM8K y MATH pueden estar en los datos de entrenamiento.
+\end{itemize}
+Como trabajo futuro proponemos:
+\begin{itemize}
+\item reinas especializadas o con salida estructurada forzada;
+\item topologías podadas o adaptativas \cite{zhang2025agentprune,zhuge2024gptswarm};
+\item tareas que se puedan descomponer de verdad;
+\item evaluación humana con dos evaluadores.
+\end{itemize}
 
 \section{Conclusiones}
 
-Se construyó un orquestador reina--obreros que cambia de modelo y de dominio solo con configuración, y se midió con datos reales de uso cuánto cuesta coordinar. En tres dominios y 195 corridas, por USD~0.22, ni la jerárquica ni la malla mejoraron la calidad del agente único, y su costo creció entre 2.7\x{} y 16.6\x{}; la malla, más del doble de rápido que la jerárquica al aumentar $n$. Con un modelo capaz, la coordinación es un costo que solo se justifica en tareas que un único agente no resuelve.
+Se construyó un orquestador reina--obreros agnóstico al modelo y al dominio, y se midió en GPU cuánto cuesta y cuánto aporta coordinar modelos pequeños. En 3\,640 corridas, los \textit{swarms} costaron entre 1.8\x{} y 20.7\x{} el cómputo del agente débil y no superaron ni a la votación con el mismo número de llamadas ni al modelo fuerte solo. Lo que sí mejoró la exactitud fue cambiar la reina. Con modelos pequeños, la calidad de un \textit{swarm} depende de quién coordina más que de cuántos trabajan.
 
 \section*{Disponibilidad de código y datos}
-El código, el cuaderno ejecutado, los registros de cada corrida y llamada, la evaluación ciega de Cartagena y los scripts que generan las tablas y figuras están en un repositorio público \cite{repo2026swarm}.
+El código, los cuadernos ejecutados (V4.0, con la matriz completa, y V4.2, con el análisis), los registros de cada corrida, llamada y carga de modelo, la evaluación ciega de Cartagena y el script que genera las tablas y figuras de este artículo están en un repositorio público \cite{repo2026swarm}. El primer estudio con \texttt{deepseek-flash} queda archivado allí.
 
 \begin{thebibliography}{99}
 
@@ -288,8 +344,14 @@ G.~Zhang, Y.~Yue, Z.~Li, S.~Yun, G.~Wan, K.~Wang, D.~Cheng, J.~X. Yu, and T.~Che
 \bibitem{qian2025macnet}
 C.~Qian, Z.~Xie, Y.~Wang \emph{et~al.}, ``Scaling large language model-based multi-agent collaboration,'' in \emph{Proc. Int. Conf. Learning Representations (ICLR)}, 2025.
 
+\bibitem{wang2023selfconsistency}
+X.~Wang, J.~Wei, D.~Schuurmans, Q.~Le, E.~Chi, S.~Narang, A.~Chowdhery, and D.~Zhou, ``Self-consistency improves chain of thought reasoning in language models,'' in \emph{Proc. Int. Conf. Learning Representations (ICLR)}, 2023.
+
 \bibitem{li2024moreagents}
 J.~Li, Q.~Zhang, Y.~Yu, Q.~Fu, and D.~Ye, ``More agents is all you need,'' \emph{Trans. Machine Learning Research (TMLR)}, 2024.
+
+\bibitem{condorcet1785}
+M.~J.~A.~N. de Caritat, marqués de Condorcet, \emph{Essai sur l'application de l'analyse à la probabilité des décisions rendues à la pluralité des voix}. París: Imprimerie Royale, 1785.
 
 \bibitem{kim2025correlated}
 E.~Kim, A.~Garg, K.~Peng, and N.~Garg, ``Correlated errors in large language models,'' in \emph{Proc. 42nd Int. Conf. Machine Learning (ICML)}, 2025.
@@ -297,8 +359,17 @@ E.~Kim, A.~Garg, K.~Peng, and N.~Garg, ``Correlated errors in large language mod
 \bibitem{kapoor2024agents}
 S.~Kapoor, B.~Stroebl, Z.~S. Siegel, N.~Nadgir, and A.~Narayanan, ``AI agents that matter,'' arXiv:2407.01502, 2024.
 
-\bibitem{deepseek2026pricing}
-DeepSeek, ``Models \& pricing,'' documentación de la API, \url{https://api-docs.deepseek.com/quick_start/pricing}, consultado el 7 de octubre de 2026.
+\bibitem{holm1979}
+S.~Holm, ``A simple sequentially rejective multiple test procedure,'' \emph{Scandinavian Journal of Statistics}, vol.~6, no.~2, pp.~65--70, 1979.
+
+\bibitem{qwen2025}
+Qwen Team, ``Qwen2.5 technical report,'' arXiv:2412.15115, 2024.
+
+\bibitem{llama2024}
+A.~Grattafiori, A.~Dubey, A.~Jauhri \emph{et~al.}, ``The Llama 3 herd of models,'' arXiv:2407.21783, 2024.
+
+\bibitem{ollama}
+Ollama, ``Ollama,'' software, versión 0.34.0, 2026. \url{https://ollama.com}
 
 \bibitem{cobbe2021gsm8k}
 K.~Cobbe, V.~Kosaraju, M.~Bavarian \emph{et~al.}, ``Training verifiers to solve math word problems,'' arXiv:2110.14168, 2021.
@@ -312,17 +383,8 @@ H.~Lightman, V.~Kosaraju, Y.~Burda \emph{et~al.}, ``Let's verify step by step,''
 \bibitem{hendrycks2021math}
 D.~Hendrycks, C.~Burns, S.~Kadavath, A.~Arora, S.~Basart, E.~Tang, D.~Song, and J.~Steinhardt, ``Measuring mathematical problem solving with the MATH dataset,'' in \emph{Advances in Neural Information Processing Systems (NeurIPS), Datasets and Benchmarks Track}, 2021.
 
-\bibitem{panickssery2024selfpref}
-A.~Panickssery, S.~R. Bowman, and S.~Feng, ``LLM evaluators recognize and favor their own generations,'' in \emph{Advances in Neural Information Processing Systems (NeurIPS)}, 2024.
-
 \bibitem{zheng2023judging}
 L.~Zheng, W.-L. Chiang, Y.~Sheng \emph{et~al.}, ``Judging LLM-as-a-judge with MT-Bench and Chatbot Arena,'' in \emph{Advances in Neural Information Processing Systems (NeurIPS), Datasets and Benchmarks Track}, 2023.
-
-\bibitem{mcnemar1947}
-Q.~McNemar, ``Note on the sampling error of the difference between correlated proportions or percentages,'' \emph{Psychometrika}, vol.~12, no.~2, pp.~153--157, 1947.
-
-\bibitem{cohen1960}
-J.~Cohen, ``A coefficient of agreement for nominal scales,'' \emph{Educational and Psychological Measurement}, vol.~20, no.~1, pp.~37--46, 1960.
 
 \bibitem{repo2026swarm}
 J.~A. Mendoza Castro and E.~Gaviria Zambrano, ``swarm-llm-orchestrator,'' repositorio de GitHub, 2026. \url{https://github.com/EstebanGZam/swarm-llm-orchestrator}

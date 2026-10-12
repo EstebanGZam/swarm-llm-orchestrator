@@ -1,0 +1,17 @@
+family,domain,config,improved,unchanged,worsened
+llama,gsm8k,mesh-2/weak,0.23,0.69,0.08
+llama,gsm8k,mesh-4/weak,0.4,0.46,0.14
+llama,gsm8k,mesh-2/mixed,0.2,0.67,0.13
+llama,gsm8k,mesh-4/mixed,0.32,0.56,0.12
+llama,math,mesh-2/weak,0.0,1.0,0.0
+llama,math,mesh-4/weak,0.05,0.9,0.05
+llama,math,mesh-2/mixed,0.15,0.85,0.0
+llama,math,mesh-4/mixed,0.15,0.85,0.0
+qwen,gsm8k,mesh-2/weak,0.22,0.67,0.11
+qwen,gsm8k,mesh-4/weak,0.43,0.38,0.19
+qwen,gsm8k,mesh-2/mixed,0.22,0.64,0.14
+qwen,gsm8k,mesh-4/mixed,0.41,0.38,0.21
+qwen,math,mesh-2/weak,0.15,0.85,0.0
+qwen,math,mesh-4/weak,0.0,0.85,0.15
+qwen,math,mesh-2/mixed,0.1,0.9,0.0
+qwen,math,mesh-4/mixed,0.15,0.8,0.05

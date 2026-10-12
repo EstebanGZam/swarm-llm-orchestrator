@@ -19,7 +19,7 @@ A first experiment with a strong API model (DeepSeek, notebook V3.4, now in `not
 | Cost | GPU-seconds, GPU energy (integrated board power, 20 Hz), tokens, calls, wall time |
 | Protocol | hypotheses H1–H8 and a difficulty-calibration rule fixed before running; paired per-problem tests with Holm correction |
 
-**Main result** (3,640 evaluation runs, 10 GPU-hours, no infrastructure failures). Accuracy, with GPU-seconds per run in brackets:
+**Main result** (3,640 evaluation runs, 10 hours of computation, no infrastructure failures). Accuracy, with GPU-seconds per run in brackets:
 
 | | Qwen GSM8K | Llama GSM8K | Qwen MATH | Llama MATH |
 |---|---|---|---|---|
@@ -35,13 +35,14 @@ A first experiment with a strong API model (DeepSeek, notebook V3.4, now in `not
 - **The coordinator is the lever that helped.** Replacing only the queen with the strong model raised GSM8K accuracy by 0.11–0.19 and cut Llama's invalid plans from 81–92% to 22–39% of runs.
 - **Cartagena (open task).** The rubric was applied blind by an LLM rater (Claude Opus 5.5), not by humans: single agents scored 0.61, mesh swarms 0.48 and hierarchical swarms 0.39.
 
-The full analysis, hypothesis verdicts and limitations are in section 13 of the V4.1 notebook.
+The full analysis, hypothesis verdicts and limitations are in section 13 of the V4.2 notebook and in the paper.
 
 ## Contents
 
 ```
 notebook/
-  2026.10.12_Swarm_Notebook_EN_V4.1.ipynb   current notebook: analysis of the stored results + conclusions
+  2026.10.12_Swarm_Notebook_EN_V4.2.ipynb   current notebook: analysis of the stored results, conclusions, table export
+  2026.10.12_Swarm_Notebook_EN_V4.1.ipynb   previous version (same analysis, no table export)
   2026.10.11_Swarm_Notebook_EN_V4.0.ipynb   the same code as executed for the experiment (calibration, pilot, 10 h grid)
   results_local/
     runs.jsonl           one row per run: answer, accuracy, tokens, GPU-seconds, energy, failure flags
@@ -49,6 +50,7 @@ notebook/
     swaps.jsonl          model load/unload events, kept apart from the per-run costs
     hardware.json        GPU, driver, idle power, Ollama settings
     summary.csv          main results table
+    tables/              analysis tables written by V4.2 (read by paper/make_assets.py)
     figures/             notebook figures
     human_eval/          blind Cartagena answers, rubric, the LLM rater's sheet and notes, answer key
                          (the folder keeps its original name; the rating is not human, see amendment C)
@@ -57,7 +59,10 @@ notebook/
     results_deepseek/, results_ollama/, pilots/
 scripts/
   ollama_experiment_server.sh   Ollama server with the settings that keep every model 100% on GPU
-paper/                   the paper (IEEE format, in Spanish); V1.0 describes the first study
+paper/
+  main.tex, main.pdf     paper V2.0 on the current study (IEEE format, in Spanish)
+  make_assets.py         figures (figs/), table bodies (tabs/) and numbers.json from results_local/tables
+  archive/v1.0/          paper V1.0 on the first (DeepSeek) study, with its own make_assets.py
 docs/factcheck.md        primary-source check behind the paper's references
 ```
 
@@ -71,7 +76,7 @@ docs/factcheck.md        primary-source check behind the paper's references
 
 Start Jupyter from the `notebook/` folder: data and results paths are relative to it.
 
-- **Analysis only, with no GPU and no server.** Open the V4.1 notebook, set `ANALYSIS_ONLY = True` and run all cells. Every run is identified by a deterministic id, so the notebook finds all 3,640 runs in `results_local/` and only recomputes tables, tests and figures.
+- **Analysis only, with no GPU and no server.** Open the V4.2 notebook, set `ANALYSIS_ONLY = True` and run all cells. Every run is identified by a deterministic id, so the notebook finds all 3,640 runs in `results_local/` and only recomputes tables, tests and figures.
 - **Pipeline test.** Set `BACKEND = "mock"`. The fake answers go to `results_mock/` (ignored by git), and every output is stamped MOCK DATA.
 - **Re-running the experiment.**
   1. Start `scripts/ollama_experiment_server.sh`; it listens on port 11435.
@@ -82,7 +87,7 @@ Start Jupyter from the `notebook/` folder: data and results paths are relative t
 ## Rebuilding the paper
 
 ```bash
-python paper/make_assets.py     # figures and numbers.json from the results
+python paper/make_assets.py     # figures, table bodies and numbers.json from notebook/results_local/tables
 ```
 
 - **On Overleaf or a full TeX Live:** upload `main.tex`, `IEEEtran.cls` and `figs/`, and compile with pdfLaTeX twice.

@@ -1,0 +1,32 @@
+{
+ "runs": 195,
+ "calls": 921,
+ "tokens": 662929,
+ "billed_calls": 987,
+ "spend_billed": 0.22209852,
+ "spend_list": 0.445326,
+ "cache_hit": 3840,
+ "ledger_in": 473448,
+ "reasoning": 0,
+ "failures": 0,
+ "max_prompt": 8129,
+ "coord": {
+  "gsm8k": {
+   "swarm_runs": 80,
+   "any_worker_wrong": 1,
+   "queen_kept": 1.0,
+   "review_improved": 0,
+   "mesh_runs": 40
+  },
+  "math": {
+   "swarm_runs": 40,
+   "any_worker_wrong": 8,
+   "queen_kept": 1.0,
+   "review_improved": 5,
+   "mesh_runs": 20
+  }
+ },
+ "local_runs": 20,
+ "local_calls": 108,
+ "local_max_prompt": 3250
+}
